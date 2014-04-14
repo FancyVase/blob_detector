@@ -1,0 +1,4 @@
+<launch>
+	<include file="$(find openni_launch)/launch/openni.launch" />
+     <node name="blob_detector" pkg="blob_detector" type="blob_detector_.py"/>
+</launch>
