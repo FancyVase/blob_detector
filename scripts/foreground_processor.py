@@ -7,7 +7,7 @@ from rgbd_image_processor import RGBDImageProcessor
 class ForegroundProcessor(RGBDImageProcessor):
     def __init__(self, node_name):
         super(ForegroundProcessor, self).__init__(node_name)
-        self.background_subtractor =  cv2.BackgroundSubtractorMOG(history=5, nmixtures=3, backgroundRatio=0.7)
+        self.background_subtractor =  cv2.BackgroundSubtractorMOG(history=5, nmixtures=3, backgroundRatio=0.8)
 
     def get_depth_mask(self, depth_image):
         depth = depth_image.copy()
@@ -17,7 +17,7 @@ class ForegroundProcessor(RGBDImageProcessor):
         fgmask = self.background_subtractor.apply(depth)
 
         kernel = np.ones((5,5), np.uint8)
-        fgmask = cv2.erode(fgmask, kernel, iterations = 2)
+        fgmask = cv2.erode(fgmask, kernel, iterations = 1)
         fgmask = cv2.dilate(fgmask, kernel, iterations = 1)
 
         return fgmask

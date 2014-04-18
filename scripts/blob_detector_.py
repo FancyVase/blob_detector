@@ -7,13 +7,15 @@ import operator
 import rospy
 from blob_detector.msg import Blob as BlobMsg
 from blob_detector.msg import Blobs as BlobsMsg
-
+from april_tag.msg import AprilTagList
+from april_tag.msg import AprilTag
 
 
 class BlobDetector(ForegroundProcessor):
     def __init__(self, node_name):
         super(BlobDetector, self).__init__(node_name)
         self.pub = rospy.Publisher('/blobs', BlobsMsg)
+        #self.pub = rospy.Publisher('/april_tags', AprilTagList)
 
     def find_blobs(self, mask):
         contours0 = cv2.findContours( mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -31,6 +33,8 @@ class BlobDetector(ForegroundProcessor):
         for blob in blobs:
             blob.set_world_coordinates_from_depth(depth)
         self.process_blobs(blobs, rgb, depth)
+
+
 
     def process_blobs(self, blobs, rgb, depth):
         blobs_msg = BlobsMsg()
