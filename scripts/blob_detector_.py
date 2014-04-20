@@ -14,8 +14,6 @@ class BlobDetector(ForegroundProcessor):
     def __init__(self, node_name):
         super(BlobDetector, self).__init__(node_name)
         self.pub = rospy.Publisher('/blobs', BlobsMsg)
-        self.depth_mask_trail = []
-        #self.pub = rospy.Publisher('/april_tags', AprilTagList)
 
     def find_blobs(self, mask):
         contours0 = cv2.findContours( mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -29,14 +27,6 @@ class BlobDetector(ForegroundProcessor):
         return blobs
         
     def process_depth_mask_image(self, depth_mask, rgb, depth):
-        self.depth_mask_trail.insert(0, depth_mask)
-        if len(self.depth_mask_trail) > 3:
-            self.depth_mask_trail.pop()
-            print 'using median mask'
-            print 'before: %s %s' % (depth_mask.shape, depth_mask.dtype)
-            #depth_mask2 = np.median(self.depth_mask_trail)
-            print 'after: %s %s' % (depth_mask.shape, depth_mask.dtype)
-
         blobs = self.find_blobs(depth_mask)
         for blob in blobs:
             blob.set_world_coordinates_from_depth(depth)

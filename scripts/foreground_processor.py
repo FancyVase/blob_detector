@@ -32,23 +32,19 @@ class ForegroundProcessor(RGBDImageProcessor):
         depth_image[depth_image > MAX_DEPTH] = MAX_DEPTH
         depth_image = (depth_image / MAX_DEPTH) * 255
 
-        #cv2.normalize(depth_image, depth_image, 0, 255, cv2.NORM_MINMAX)
         depth_image = depth_image.astype(np.uint8)
 
         mask = np.zeros_like(depth_image)
         mask[depth_image == 0] = 255
 
         mask = cv2.resize(mask, (320, 240))
-
         depth_image = cv2.resize(depth_image, (320, 240))
 
 
         depth_image = cv2.inpaint(depth_image, mask, 5.0, cv2.INPAINT_TELEA)
-        #depth_image = cv2.resize(depth_image, (640, 480))
-        print 'after everything', depth_image.shape, depth_image.dtype
-        #return mask
+
         return depth_image
-        pass
+
 
     def process_rgbd_image(self, rgb, depth):
         depth_cleaned = self.clean_depth_image(depth)
