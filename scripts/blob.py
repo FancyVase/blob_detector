@@ -2,17 +2,23 @@ import cv2
 import numpy as np
 import colorsys
 import math
+from blob_detector.msg import Blob as BlobMsg
+import random
 
 def rgb_by_index(idx):
     idx = idx  % 1.0
     r,g,b = colorsys.hsv_to_rgb(idx, 0.5, 0.5)
     return (int(r*255), int(g*255), int(b*255))
 
+NUM_COLORS = 100
+COLOR_TABLE = [rgb_by_index(random.random()) for x in range(100)]
+
 class Blob(object):
     def __init__(self, contour, source_rgbd):
         self.contour = contour
         self.source_rgbd = source_rgbd
         self.idx = 0
+        self.id = None
 
         self.area = cv2.contourArea(contour)
         self.moments = cv2.moments(contour)
@@ -62,11 +68,23 @@ class Blob(object):
                               - ((self.x_w*self.x_w) 
                               + (self.y_w * self.y_w)))                
 
+    def similar_to(self, blob):
+        if abs(self.centroid_x - blob.centroid_x) < 20 and abs(self.centroid_y - blob.centroid_y) < 20:
+            return True
+        return False
+
+    def acquire_history(self, blob):
+        self.id = blob.id
+
 
     def draw(self, image):
+        color = (0, 0, 100)
+        if self.id is not None:
+            color = COLOR_TABLE[self.id % NUM_COLORS]
+
         cv2.drawContours(image, [self.contour], 
                         0, # draw the only contour
-                        color = rgb_by_index(self.idx), 
+                        color = color, 
                         thickness = -1, # filled
                         lineType = cv2.CV_AA)
         cv2.ellipse(image, box=((self.centroid_x, self.centroid_y), (6,6), 0), color=(0,0,255),
@@ -86,5 +104,12 @@ class Blob(object):
                         (0, 100, 180), # color
                         2 # thickness
                         )            
-
+    def to_msg(self):
+        blob_msg = BlobMsg()
+        blob_msg.x = self.x_w
+        blob_msg.y = self.y_w
+        blob_msg.z = self.z_w
+        if self.id is not None:
+            blob_msg.id = self.id      
+        return blob_msg
 

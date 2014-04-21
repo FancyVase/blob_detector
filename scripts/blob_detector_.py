@@ -34,22 +34,23 @@ class BlobDetector(ForegroundProcessor):
         self.process_blobs(blobs, rgbd)
 
 
-
-    def process_blobs(self, blobs, rgbd):
+    def publish_blobs(self, blobs):
         blobs_msg = BlobsMsg()
-        blobs_msg.blobs = []
         for blob in blobs:
-            blob_msg = BlobMsg()
-            blob_msg.x = blob.x_w
-            blob_msg.y = blob.y_w
-            blob_msg.z = blob.z_w
+            blob_msg = blob.to_msg()
             blobs_msg.blobs.append(blob_msg)
 
         self.pub.publish(blobs_msg)
 
+    def show_blobs(self, blobs, rgbd):
         for blob in blobs:
             blob.draw(rgbd.depth_color_sm)
         self.show_depth_color(rgbd)
+
+
+    def process_blobs(self, blobs, rgbd):
+        self.publish_blobs(blobs)
+        self.show_blobs(self, blobs, rgbd)
 
 if __name__ == '__main__':
     bd = BlobDetector('fg')
