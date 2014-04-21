@@ -14,6 +14,14 @@ from cv_bridge import CvBridge, CvBridgeError
 from ros_node import RosNode
 
 
+class RGBDImage(object):
+    def __init__(self, rgb_image, depth_raw):
+        self.depth_raw = depth_raw
+        self.rgb_image = rgb_image
+        self.depth_image = None
+
+
+
 class RGBDImageProcessor(RosNode):
     """
     RGBDImageProcessor
@@ -89,7 +97,8 @@ class RGBDImageProcessor(RosNode):
 
 
     def _process_rgbd_image(self, rgb_ndarray, depth_ndarray):
-        self.process_rgbd_image(rgb_ndarray, depth_ndarray)
+        rgbd = RGBDImage(rgb_ndarray, depth_ndarray)
+        self.process_rgbd_image(rgbd)
         self._process_count += 1
 
 
@@ -98,8 +107,8 @@ class RGBDImageProcessor(RosNode):
     #############################################################
     # override me
     #
-    def process_rgbd_image(self, rgb_ndarray, depth_ndarray):
-        self.show_rgbd_image(rgb_ndarray, depth_ndarray)
+    def process_rgbd_image(self, rgbd):
+        self.show_rgbd_image(rgbd)
     #
     #
     #############################################################
@@ -133,15 +142,17 @@ class RGBDImageProcessor(RosNode):
                     (0, 90, 190), 2) # color       
 
 
-    def show_rgbd_image(self, rgb_ndarray, depth_ndarray):
-        self._draw_status_text(rgb_ndarray)
+    def show_rgbd_image(self, rgbd):
+        self._draw_status_text(rgbd.rgb_image)
 
-        depth_fake = cv2.cvtColor(depth_ndarray, cv2.COLOR_GRAY2BGR)
-        cv2.normalize(depth_fake, depth_fake, 0, 255, cv2.NORM_MINMAX)
+        depth_image = rgbd.depth_image
+    
+        if depth_image is None:
+            depth_image = cv2.cvtColor(rgbd.depth_raw, cv2.COLOR_GRAY2BGR)
+            cv2.normalize(depth_image, depth_image, 0, 255, cv2.NORM_MINMAX)
+            depth_image = depth_image.astype(numpy.uint8)
 
-        depth_fake = depth_fake.astype(numpy.uint8)
-
-        vis = numpy.hstack((rgb_ndarray, depth_fake))
+        vis = numpy.hstack((rgbd.rgb_image, depth_image))
 
         self._show_image(vis)
 

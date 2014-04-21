@@ -9,17 +9,58 @@ def rgb_by_index(idx):
     return (int(r*255), int(g*255), int(b*255))
 
 class Blob(object):
-    def __init__(self, contour, idx=0):
+    def __init__(self, contour, source_rgbd):
         self.contour = contour
+        self.source_rgbd = source_rgbd
+        self.idx = 0
+
         self.area = cv2.contourArea(contour)
         self.moments = cv2.moments(contour)
         self.centroid_x = int(self.moments['m10']/(self.moments['m00'] + 1.0))
         self.centroid_y = int(self.moments['m01']/(self.moments['m00'] + 1.0))
 
+        self._mask = None
         self.median_depth = None
-        self.idx = idx
-
         self.x_w, self.y_w, self.z_w = None, None, None
+
+    def compute_params(self):
+        self._set_mask()
+        self._set_median_depth()
+        self._set_world_coordinates()
+
+
+
+    def _set_mask(self):
+        mask = np.zeros_like(self.source_rgbd.depth_mask_sm)
+        cv2.drawContours(mask, [self.contour], 
+                        0, # draw the only contour
+                        color = 1, 
+                        thickness = -1, # filled
+                        lineType = cv2.CV_AA)
+        self._mask = mask
+
+    def _set_median_depth(self):
+        mask_large = cv2.resize(self._mask, (640, 480))
+        median_depth = np.median(self.source_rgbd.depth_raw[mask_large != 0])
+        median_depth = max(median_depth, 500) 
+        self.median_depth = median_depth / 10 # in cms and not kinect's mm
+
+    def _set_world_coordinates(self):
+        centroid_x = self.centroid_x * 2
+        centroid_y = self.centroid_y * 2
+
+        x_p = -1*(centroid_x-320)
+        y_p = -1*(centroid_y-240)
+        f_p = 425
+
+
+        self.x_w = (x_p * self.median_depth) / (math.sqrt((x_p * x_p) + (f_p*f_p)))
+
+        self.y_w = (y_p * self.median_depth) / (math.sqrt((y_p * y_p) + (f_p*f_p)))
+         
+        self.z_w = math.sqrt((self.median_depth*self.median_depth) 
+                              - ((self.x_w*self.x_w) 
+                              + (self.y_w * self.y_w)))                
 
 
     def draw(self, image):
@@ -46,32 +87,4 @@ class Blob(object):
                         2 # thickness
                         )            
 
-    def _get_bool_mask(self, image):
-        mask = np.zeros_like(image)
-        mask = mask.astype(np.uint8)
-        cv2.drawContours(mask, [self.contour], 
-                        0, # draw the only contour
-                        color = 1, 
-                        thickness = -1, # filled
-                        lineType = cv2.CV_AA)
-        mask = mask.astype(bool)
-        return mask
 
-    def set_world_coordinates_from_depth(self, depth):
-        mask = self._get_bool_mask(depth)
-        self.median_depth = max(np.median(depth[mask]), 500)
-
-        x_p = -1*(self.centroid_x-320)
-        y_p = -1*(self.centroid_y-240)
-        f_p = 425
-
-        self.median_depth = self.median_depth / 10 # depth was in mm
-
-
-        self.x_w = (x_p * self.median_depth) / (math.sqrt((x_p * x_p) + (f_p*f_p)))
-
-        self.y_w = (y_p * self.median_depth) / (math.sqrt((y_p * y_p) + (f_p*f_p)))
-         
-        self.z_w = math.sqrt((self.median_depth*self.median_depth) 
-                              - ((self.x_w*self.x_w) 
-                              + (self.y_w * self.y_w)))        

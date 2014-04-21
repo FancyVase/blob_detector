@@ -4,7 +4,8 @@ import cv2
 import numpy as np
 from rgbd_image_processor import RGBDImageProcessor
 NUM_FILTER = 3
-MAX_DEPTH = 8000
+MAX_DEPTH = 4000  ### key parameter. everything beyond this whited out and considered background
+BUFFER_DEPTH = 2000
 
 class ForegroundProcessor(RGBDImageProcessor):
     def __init__(self, node_name):
@@ -29,8 +30,8 @@ class ForegroundProcessor(RGBDImageProcessor):
         """
         depth_image = depth_image.copy()
 
-        depth_image[depth_image > MAX_DEPTH] = MAX_DEPTH
-        depth_image = (depth_image / MAX_DEPTH) * 255
+        depth_image[depth_image > MAX_DEPTH] = MAX_DEPTH + BUFFER_DEPTH
+        depth_image = (depth_image / (MAX_DEPTH + BUFFER_DEPTH)) * 255
 
         depth_image = depth_image.astype(np.uint8)
 
@@ -46,36 +47,29 @@ class ForegroundProcessor(RGBDImageProcessor):
         return depth_image
 
 
-    def process_rgbd_image(self, rgb, depth):
-        depth_cleaned = self.clean_depth_image(depth)
+    def process_rgbd_image(self, rgbd):
+        depth_cleaned = self.clean_depth_image(rgbd.depth_raw)
 
 
         depth_mask = self.get_depth_mask(depth_cleaned)
-        #depth_mask = np.zeros_like(depth_cleaned)
-        depth_mask = cv2.resize(depth_mask, (640, 480))
-        #depth = cv2.resize(depth_cleaned, (640, 480))
 
-        self.process_depth_mask_image(depth_mask, rgb, depth)
+        rgbd.depth_image_sm = depth_cleaned
+        rgbd.depth_mask_sm = depth_mask
 
-    def filter_depth_mask(self, mask):
-        if self.depth_mask_trail is None:
-            self.depth_mask_trail = np.zeros((NUM_FILTER, mask.shape[0], mask.shape[1]))
-        self.depth_mask_trail[self.filter_idx] = mask
-        self.filter_idx = (self.filter_idx + 1) % NUM_FILTER
+        rgbd.depth_color_sm = cv2.cvtColor(rgbd.depth_image_sm, cv2.COLOR_GRAY2BGR)
 
-        mask=np.mean(self.depth_mask_trail, axis=0)
-        print mask.shape, mask.dtype
-        return mask
+
+        self.process_depth_mask_image(rgbd)
 
 
     # override me
-    def process_depth_mask_image(self, depth_mask, rgb, depth):
-        #depth[depth_mask != 255] = 0
-        cv2.normalize(depth, depth, 0, 255, cv2.NORM_MINMAX)
-        cv2.imshow('depth_mask', depth_mask)
-        #k = cv2.waitKey(1)
-        self.show_rgbd_image(rgb, depth)
+    def process_depth_mask_image(self, rgbd):
+        self.show_depth_color(rgbd)
 
+    def show_depth_color(self, rgbd):
+        self._draw_status_text(rgbd.depth_color_sm)
+        cv2.imshow('depth_color', rgbd.depth_color_sm)
+        k = cv2.waitKey(1)
 
 if __name__ == '__main__':
     fg = ForegroundProcessor('fg')
