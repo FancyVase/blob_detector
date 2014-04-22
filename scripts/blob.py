@@ -57,7 +57,7 @@ class Blob(object):
 
         x_p = -1*(centroid_x-320)
         y_p = -1*(centroid_y-240)
-        f_p = 425
+        f_p = 560
 
 
         self.x_w = (x_p * self.median_depth) / (math.sqrt((x_p * x_p) + (f_p*f_p)))
